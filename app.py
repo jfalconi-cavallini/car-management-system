@@ -140,7 +140,7 @@ if __name__ == "__main__":
     # Add the job to run scheduled_scrape every 1 hour (you can adjust this)
     scheduler.add_job(
         func=scheduled_scrape,
-        trigger=IntervalTrigger(minutes=5),  # every 1 hour
+        trigger=IntervalTrigger(hours=24),  # every 1 hour
         id='scrape_job',
         name='Scrape car data every hour',
         replace_existing=True
