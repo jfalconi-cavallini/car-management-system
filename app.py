@@ -1,5 +1,11 @@
-from flask import Flask
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+import atexit
+import json
+import scraper  # your scraper.py module
+import os
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cars.db'
@@ -22,9 +28,19 @@ class Car(db.Model):
 
 
 #routes 
-@app.route("/")
+@app.route('/', methods=['GET', 'POST'])
 def home():
-    return "Railway deployment test successful!"
+    search = request.args.get('search')
+    if search:
+        cars = Car.query.filter(
+            (Car.make.ilike(f'%{search}%')) | 
+            (Car.model.ilike(f'%{search}%')) |
+            (Car.status.ilike(f'%{search}%'))
+        ).all()
+    else:
+        cars = Car.query.all()
+    return render_template('home.html', cars=cars, search=search)
+
 
 
 
