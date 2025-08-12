@@ -86,7 +86,46 @@ def edit_car(car_id):
 
 
 
+def scheduled_scrape():
+    with app.app_context():
+        print("Running scheduled scraper...")
+        base_url = 'https://www.claycooley.com/inventory/new-cars/'
+        cars = scraper.scrape_all_new_cars(base_url)
+        count_added = 0
 
+        for car_data in cars:
+            vin = car_data.get('vin')
+            if vin:
+                existing_car = Car.query.filter_by(vin=vin).first()
+            else:
+                existing_car = Car.query.filter_by(
+                    make=car_data['make'],
+                    model=car_data['model'],
+                    year=int(car_data['year']) if str(car_data['year']).isdigit() else 0
+                ).first()
+
+            if existing_car:
+                continue
+
+            price = float(car_data.get('price', 0.0))
+            mileage = int(car_data.get('mileage', 0))
+
+            new_car = Car(
+                make=car_data['make'],
+                model=car_data['model'],
+                year=int(car_data['year']) if str(car_data['year']).isdigit() else 0,
+                price=price,
+                mileage=mileage,
+                status='available',
+                vin=vin,
+                image_url=car_data.get('image_url'),
+                link=car_data.get('link')
+            )
+            db.session.add(new_car)
+            count_added += 1
+
+        db.session.commit()
+        print(f"Scheduled scraping complete: {count_added} new cars added.")
 
 
 #main code
@@ -94,4 +133,21 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     
+    #initialize scheduler
+    scheduler = BackgroundScheduler()
+    scheduler.start()
+
+    # Add the job to run scheduled_scrape every 1 hour (you can adjust this)
+    scheduler.add_job(
+        func=scheduled_scrape,
+        trigger=IntervalTrigger(minutes=1),  # every 1 hour
+        id='scrape_job',
+        name='Scrape car data every hour',
+        replace_existing=True
+    )
+
+    # Shut down the scheduler when exiting the app
+    atexit.register(lambda: scheduler.shutdown())
+
+
     app.run(host="0.0.0.0", port=8080)
