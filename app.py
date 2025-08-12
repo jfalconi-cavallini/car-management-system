@@ -41,6 +41,48 @@ def home():
         cars = Car.query.all()
     return render_template('home.html', cars=cars, search=search)
 
+@app.route('/add', methods=['GET', 'POST'])
+def add_car():
+    if request.method == 'POST':
+        car = Car(
+            make=request.form['make'],
+            model=request.form['model'],
+            year=int(request.form['year']),
+            price=float(request.form['price']),
+            mileage=int(request.form['mileage']),
+            status=request.form['status'],
+            vin=request.form.get('vin'),
+            image_url=request.form.get('image_url'),
+            link=request.form.get('link')
+        )
+        db.session.add(car)
+        db.session.commit()
+        return redirect(url_for('home'))
+    return render_template('add_car.html')
+
+@app.route('/delete/<int:car_id>')
+def delete_car(car_id):
+    car = Car.query.get_or_404(car_id)
+    db.session.delete(car)
+    db.session.commit()
+    return redirect(url_for('home'))
+
+@app.route('/edit/<int:car_id>', methods=['GET', 'POST'])
+def edit_car(car_id):
+    car = Car.query.get_or_404(car_id)
+    if request.method == 'POST':
+        car.make = request.form['make']
+        car.model = request.form['model']
+        car.year = int(request.form['year'])
+        car.price = float(request.form['price'])
+        car.mileage = int(request.form['mileage'])
+        car.status = request.form['status']
+        car.vin = request.form.get('vin')
+        car.image_url = request.form.get('image_url')
+        car.link = request.form.get('link')
+        db.session.commit()
+        return redirect(url_for('home'))
+    return render_template('edit_car.html', car=car)
 
 
 
@@ -49,4 +91,7 @@ def home():
 
 #main code
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+    
     app.run(host="0.0.0.0", port=8080)
